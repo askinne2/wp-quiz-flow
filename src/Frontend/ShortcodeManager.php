@@ -146,12 +146,16 @@ class ShortcodeManager
     public function renderQuizShortcodeLegacy(array $atts = [], ?string $content = null): string
     {
         // Log deprecation notice
-        if (function_exists('\WpFieldFlow\Core\Debug::log')) {
-            \WpFieldFlow\Core\Debug::log(
-                'Deprecated shortcode used: wpFieldFlow_quiz. Use [wpQuizFlow] instead.',
-                'warning',
-                'wpQuizFlow'
-            );
+        if (class_exists('\WpFieldFlow\Core\Debug') && method_exists('\WpFieldFlow\Core\Debug', 'log')) {
+            try {
+                \WpFieldFlow\Core\Debug::log(
+                    'Deprecated shortcode used: wpFieldFlow_quiz. Use [wpQuizFlow] instead.',
+                    'warning',
+                    'wpQuizFlow'
+                );
+            } catch (\Throwable $e) {
+                // Ignore if Debug is not available
+            }
         }
         
         // Show admin notice for deprecation
@@ -193,12 +197,16 @@ class ShortcodeManager
                 return $config;
             }
         } catch (\Exception $e) {
-            if (function_exists('\WpFieldFlow\Core\Debug::log')) {
-                \WpFieldFlow\Core\Debug::log(
-                    'Error getting sheet config: ' . $e->getMessage(),
-                    'error',
-                    'wpQuizFlow'
-                );
+            if (class_exists('\WpFieldFlow\Core\Debug') && method_exists('\WpFieldFlow\Core\Debug', 'log')) {
+                try {
+                    \WpFieldFlow\Core\Debug::log(
+                        'Error getting sheet config: ' . $e->getMessage(),
+                        'error',
+                        'wpQuizFlow'
+                    );
+                } catch (\Throwable $debugError) {
+                    // Ignore if Debug is not available
+                }
             }
         }
         
@@ -330,12 +338,16 @@ class ShortcodeManager
                 }
             }
         } catch (\Exception $e) {
-            if (function_exists('\WpFieldFlow\Core\Debug::log')) {
-                \WpFieldFlow\Core\Debug::log(
-                    'Error loading layout config for quiz: ' . $e->getMessage(),
-                    'error',
-                    'wpQuizFlow'
-                );
+            if (class_exists('\WpFieldFlow\Core\Debug') && method_exists('\WpFieldFlow\Core\Debug', 'log')) {
+                try {
+                    \WpFieldFlow\Core\Debug::log(
+                        'Error loading layout config for quiz: ' . $e->getMessage(),
+                        'error',
+                        'wpQuizFlow'
+                    );
+                } catch (\Throwable $debugError) {
+                    // Ignore if Debug is not available
+                }
             }
         }
         

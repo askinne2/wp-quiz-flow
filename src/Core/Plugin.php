@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace WpQuizFlow\Core;
 
+use WpQuizFlow\Admin\AdminMenu;
 use WpQuizFlow\Frontend\ShortcodeManager;
 use WpQuizFlow\Quiz\QuizManager;
 
@@ -30,6 +31,13 @@ final class Plugin
      * @var Plugin|null
      */
     private static ?Plugin $instance = null;
+    
+    /**
+     * Admin Menu instance
+     *
+     * @var AdminMenu|null
+     */
+    private ?AdminMenu $adminMenu = null;
     
     /**
      * Shortcode Manager instance
@@ -101,6 +109,11 @@ final class Plugin
      */
     private function initializeComponents(): void
     {
+        // Initialize Admin Menu (only in admin area)
+        if (is_admin()) {
+            $this->adminMenu = new AdminMenu();
+        }
+        
         // Initialize Quiz Manager
         $this->quizManager = new QuizManager();
         
@@ -191,6 +204,17 @@ final class Plugin
     public function getQuizManager(): ?QuizManager
     {
         return $this->quizManager;
+    }
+    
+    /**
+     * Get Admin Menu instance
+     *
+     * @since 1.0.0
+     * @return AdminMenu|null
+     */
+    public function getAdminMenu(): ?AdminMenu
+    {
+        return $this->adminMenu;
     }
 }
 
