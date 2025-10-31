@@ -1,0 +1,439 @@
+/**
+ * wpQuizFlow Quiz Styles
+ * 
+ * NOMA-style empathetic UX with Typeform-inspired design
+ * Uses wpFieldFlow design tokens for consistency
+ * 
+ * @package WpQuizFlow
+ * @since 1.0.0
+ */
+
+/* ==========================================================================
+   Quiz Container (wpQuizFlow namespace + backward compatibility)
+   ========================================================================== */
+
+.wp-quiz-flow-container,
+.wp-field-flow-quiz-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: var(--wff-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif);
+}
+
+.wp-quiz-flow,
+.wp-field-flow-quiz {
+  background: var(--wff-white, #ffffff);
+  border-radius: var(--wff-border-radius-lg, 0.5rem);
+  box-shadow: var(--wff-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05));
+  padding: var(--wff-space-10, 2.5rem);
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slideIn {
+  from { 
+    opacity: 0; 
+    transform: translateX(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+/* ==========================================================================
+   Progress Bar
+   ========================================================================== */
+
+.wp-quiz-flow-progress,
+.wp-field-flow-quiz-progress {
+  margin-bottom: var(--wff-space-8, 2rem);
+}
+
+.wp-quiz-flow-progress-bar,
+.wp-field-flow-quiz-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--wff-gray-100, #f0f0f0);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.wp-quiz-flow-progress-fill,
+.wp-field-flow-quiz-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--wff-primary, #0073aa) 0%, var(--wff-success, #00a32a) 100%);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(0, 115, 170, 0.3);
+}
+
+/* ==========================================================================
+   Question Step
+   ========================================================================== */
+
+.wp-quiz-flow-step,
+.wp-field-flow-quiz-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wp-quiz-flow-question,
+.wp-field-flow-quiz-question {
+  font-size: var(--wff-font-size-3xl, 1.875rem);
+  font-weight: 600;
+  color: var(--wff-gray-800, #1a1a1a);
+  margin: 0 0 var(--wff-space-3, 0.75rem);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.wp-quiz-flow-subtitle,
+.wp-field-flow-quiz-subtitle {
+  font-size: var(--wff-font-size-base, 1rem);
+  color: var(--wff-gray-500, #666666);
+  margin: 0 0 var(--wff-space-8, 2rem);
+  font-weight: 400;
+}
+
+/* ==========================================================================
+   Options
+   ========================================================================== */
+
+.wp-quiz-flow-options,
+.wp-field-flow-quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wff-space-4, 1rem);
+  margin-bottom: var(--wff-space-8, 2rem);
+}
+
+.wp-quiz-flow-option,
+.wp-field-flow-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: var(--wff-space-4, 1rem);
+  padding: var(--wff-space-5, 1.25rem) var(--wff-space-6, 1.5rem);
+  background: var(--wff-white, #ffffff);
+  border: 2px solid var(--wff-gray-200, #e0e0e0);
+  border-radius: var(--wff-border-radius-lg, 0.5rem);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: var(--wff-font-size-lg, 1.125rem);
+  color: var(--wff-gray-700, #333333);
+  text-align: left;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.wp-quiz-flow-option::before,
+.wp-field-flow-quiz-option::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: linear-gradient(90deg, rgba(0, 115, 170, 0.05) 0%, transparent 100%);
+  transition: width 0.3s ease;
+}
+
+.wp-quiz-flow-option:hover,
+.wp-field-flow-quiz-option:hover {
+  border-color: var(--wff-primary, #0073aa);
+  transform: translateY(-2px);
+  box-shadow: var(--wff-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+}
+
+.wp-quiz-flow-option:hover::before,
+.wp-field-flow-quiz-option:hover::before {
+  width: 100%;
+}
+
+.wp-quiz-flow-option:active,
+.wp-field-flow-quiz-option:active {
+  transform: translateY(0);
+}
+
+/* Priority highlighting for urgent options */
+.wp-quiz-flow-option.priority-urgent,
+.wp-field-flow-quiz-option.priority-urgent {
+  border-color: var(--wff-error, #dc3232);
+  background: rgba(220, 50, 50, 0.02);
+}
+
+.wp-quiz-flow-option.priority-urgent:hover,
+.wp-field-flow-quiz-option.priority-urgent:hover {
+  border-color: var(--wff-error, #dc3232);
+  background: rgba(220, 50, 50, 0.05);
+}
+
+.wp-quiz-flow-option.priority-high,
+.wp-field-flow-quiz-option.priority-high {
+  border-color: var(--wff-warning, #f56e28);
+  background: rgba(245, 110, 40, 0.02);
+}
+
+.wp-quiz-flow-option.priority-high:hover,
+.wp-field-flow-quiz-option.priority-high:hover {
+  border-color: var(--wff-warning, #f56e28);
+  background: rgba(245, 110, 40, 0.05);
+}
+
+/* Option content */
+.wp-quiz-flow-option-emoji,
+.wp-field-flow-quiz-option-emoji {
+  font-size: var(--wff-font-size-3xl, 1.875rem);
+  line-height: 1;
+  flex-shrink: 0;
+  filter: grayscale(0.2);
+  transition: all 0.2s ease;
+}
+
+.wp-quiz-flow-option:hover .wp-quiz-flow-option-emoji,
+.wp-field-flow-quiz-option:hover .wp-field-flow-quiz-option-emoji {
+  filter: grayscale(0);
+  transform: scale(1.1);
+}
+
+.wp-quiz-flow-option-text,
+.wp-field-flow-quiz-option-text {
+  flex: 1;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
+/* ==========================================================================
+   Navigation
+   ========================================================================== */
+
+.wp-quiz-flow-navigation,
+.wp-field-flow-quiz-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--wff-space-3, 0.75rem);
+  margin-top: auto;
+  padding-top: var(--wff-space-6, 1.5rem);
+}
+
+.wp-quiz-flow-button,
+.wp-field-flow-quiz-button {
+  padding: var(--wff-space-3, 0.75rem) var(--wff-space-6, 1.5rem);
+  border-radius: var(--wff-border-radius, 0.375rem);
+  font-size: var(--wff-font-size-base, 1rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wff-space-2, 0.5rem);
+  white-space: nowrap;
+}
+
+.wp-quiz-flow-button-primary,
+.wp-field-flow-quiz-button-primary {
+  background: var(--wff-primary, #0073aa);
+  color: var(--wff-white, #ffffff);
+}
+
+.wp-quiz-flow-button-primary:hover:not(:disabled),
+.wp-field-flow-quiz-button-primary:hover:not(:disabled) {
+  background: var(--wff-primary-hover, #005a87);
+  transform: translateY(-1px);
+  box-shadow: var(--wff-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+}
+
+.wp-quiz-flow-button-secondary,
+.wp-field-flow-quiz-button-secondary {
+  background: var(--wff-white, #ffffff);
+  color: var(--wff-gray-600, #4a4a4a);
+  border: 2px solid var(--wff-gray-200, #e0e0e0);
+}
+
+.wp-quiz-flow-button-secondary:hover,
+.wp-field-flow-quiz-button-secondary:hover {
+  border-color: var(--wff-gray-400, #999999);
+  background: var(--wff-gray-50, #f9f9f9);
+  transform: translateX(-2px);
+}
+
+/* ==========================================================================
+   Results View
+   ========================================================================== */
+
+.wp-quiz-flow-results,
+.wp-field-flow-quiz-results {
+  width: 100%;
+  animation: fadeIn 0.5s ease-in;
+}
+
+.wp-quiz-flow-results-header,
+.wp-field-flow-quiz-results-header {
+  text-align: center;
+  padding: var(--wff-space-8, 2rem) var(--wff-space-6, 1.5rem);
+  background: linear-gradient(135deg, #0073aa 0%, #00a32a 100%);
+  color: var(--wff-white, #ffffff);
+  border-radius: var(--wff-border-radius-lg, 0.5rem);
+  margin-bottom: var(--wff-space-8, 2rem);
+  box-shadow: var(--wff-shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05));
+}
+
+.wp-quiz-flow-results-header h2,
+.wp-field-flow-quiz-results-header h2 {
+  font-size: var(--wff-font-size-3xl, 1.875rem);
+  font-weight: 600;
+  margin: 0 0 var(--wff-space-3, 0.75rem);
+  letter-spacing: -0.01em;
+}
+
+.wp-quiz-flow-results-header p,
+.wp-field-flow-quiz-results-header p {
+  font-size: var(--wff-font-size-lg, 1.125rem);
+  margin: 0 0 var(--wff-space-6, 1.5rem);
+  opacity: 0.95;
+  font-weight: 400;
+}
+
+.wp-quiz-flow-results-actions,
+.wp-field-flow-quiz-results-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wff-space-4, 1rem);
+  flex-wrap: wrap;
+}
+
+.wp-quiz-flow-restart,
+.wp-field-flow-quiz-restart {
+  padding: var(--wff-space-3, 0.75rem) var(--wff-space-5, 1.25rem);
+  background: var(--wff-white, #ffffff);
+  color: var(--wff-primary, #0073aa);
+  border: 2px solid transparent;
+  border-radius: var(--wff-border-radius, 0.375rem);
+  font-size: var(--wff-font-size-base, 1rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wff-space-2, 0.5rem);
+}
+
+.wp-quiz-flow-restart:hover,
+.wp-field-flow-quiz-restart:hover {
+  transform: translateX(-3px);
+  box-shadow: var(--wff-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+  background: var(--wff-gray-50, #f9f9f9);
+}
+
+.wp-quiz-flow-contact,
+.wp-field-flow-quiz-contact {
+  padding: var(--wff-space-3, 0.75rem) var(--wff-space-5, 1.25rem);
+  background: var(--wff-success, #00a32a);
+  color: var(--wff-white, #ffffff);
+  border: 2px solid transparent;
+  border-radius: var(--wff-border-radius, 0.375rem);
+  font-size: var(--wff-font-size-base, 1rem);
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wff-space-2, 0.5rem);
+  transition: all 0.2s ease;
+}
+
+.wp-quiz-flow-contact:hover,
+.wp-field-flow-quiz-contact:hover {
+  background: #008a24;
+  transform: scale(1.05);
+  box-shadow: var(--wff-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+  text-decoration: none;
+  color: var(--wff-white, #ffffff);
+}
+
+/* ==========================================================================
+   Error State
+   ========================================================================== */
+
+.wp-quiz-flow-error,
+.wp-field-flow-quiz-error {
+  text-align: center;
+  padding: var(--wff-space-10, 2.5rem);
+  color: var(--wff-error, #dc3232);
+  background: rgba(220, 50, 50, 0.05);
+  border-radius: var(--wff-border-radius-lg, 0.5rem);
+  border: 2px solid rgba(220, 50, 50, 0.2);
+}
+
+.wp-quiz-flow-loading,
+.wp-field-flow-quiz-loading {
+  text-align: center;
+  padding: var(--wff-space-10, 2.5rem);
+  color: var(--wff-gray-600, #4a4a4a);
+}
+
+/* ==========================================================================
+   Mobile Responsive
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .wp-quiz-flow,
+  .wp-field-flow-quiz {
+    padding: var(--wff-space-6, 1.5rem);
+    min-height: 350px;
+  }
+  
+  .wp-quiz-flow-question,
+  .wp-field-flow-quiz-question {
+    font-size: var(--wff-font-size-2xl, 1.5rem);
+  }
+  
+  .wp-quiz-flow-option,
+  .wp-field-flow-quiz-option {
+    font-size: var(--wff-font-size-base, 1rem);
+    padding: var(--wff-space-4, 1rem) var(--wff-space-5, 1.25rem);
+  }
+  
+  .wp-quiz-flow-option-emoji,
+  .wp-field-flow-quiz-option-emoji {
+    font-size: var(--wff-font-size-2xl, 1.5rem);
+  }
+  
+  .wp-quiz-flow-results-header h2,
+  .wp-field-flow-quiz-results-header h2 {
+    font-size: var(--wff-font-size-2xl, 1.5rem);
+  }
+  
+  .wp-quiz-flow-results-actions,
+  .wp-field-flow-quiz-results-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .wp-quiz-flow-restart,
+  .wp-field-flow-quiz-restart,
+  .wp-quiz-flow-contact,
+  .wp-field-flow-quiz-contact {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

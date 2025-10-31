@@ -1,0 +1,76 @@
+{
+  "description": "Tag to Taxonomy Mapping for wpQuizFlow",
+  "version": "1.0.0",
+  "last_updated": "2025-10-31",
+  "mappings": {
+    "audience:self": {
+      "resource_tags": ["for-people-in-recovery"]
+    },
+    "audience:family": {
+      "resource_tags": ["for-families", "for-parents-caregivers"]
+    },
+    "audience:parent": {
+      "resource_tags": ["for-parents-caregivers"]
+    },
+    "audience:partner": {
+      "resource_tags": ["for-families"]
+    },
+    "audience:professional": {
+      "resource_tags": ["helpful-articles", "evidence-based"]
+    },
+    "stage:crisis": {
+      "resource_category": ["help-with-treatment"],
+      "resource_tags": ["interventions", "treatment"]
+    },
+    "stage:exploration": {
+      "resource_category": ["literature"],
+      "resource_tags": ["helpful-articles", "websites", "downloadable-pdfs"]
+    },
+    "stage:active_treatment": {
+      "resource_category": ["treatment-programs", "help-with-treatment"],
+      "resource_tags": ["detox", "residential", "outpatient", "treatment"]
+    },
+    "stage:recovery": {
+      "resource_category": ["support-groups"],
+      "resource_tags": ["for-people-in-recovery", "recovery-books"]
+    },
+    "stage:contemplation": {
+      "resource_category": ["literature"],
+      "resource_tags": ["helpful-articles", "interventions"]
+    },
+    "need:immediate": {
+      "resource_category": ["help-with-treatment"],
+      "resource_tags": ["interventions", "treatment"]
+    },
+    "need:counseling": {
+      "resource_category": ["treatment-programs"],
+      "resource_tags": ["outpatient", "evidence-based"]
+    },
+    "need:education": {
+      "resource_category": ["literature"],
+      "resource_tags": ["helpful-articles", "websites", "downloadable-pdfs", "podcasts"]
+    },
+    "need:peer_support": {
+      "resource_category": ["support-groups"],
+      "resource_tags": ["for-people-in-recovery", "12-step-based"]
+    },
+    "need:medical_detox": {
+      "resource_tags": ["detox", "opoid-treatment", "medically-assisted"]
+    },
+    "need:treatment_navigation": {
+      "resource_category": ["help-with-treatment", "treatment-programs"],
+      "resource_tags": ["treatment"]
+    },
+    "need:intervention": {
+      "resource_tags": ["interventions", "for-families"]
+    },
+    "need:grief": {
+      "resource_tags": ["grief-support"]
+    },
+    "need:life_skills": {
+      "resource_category": ["collegiate-recovery"],
+      "resource_tags": ["recovery-residence", "sober-living", "extended-care"]
+    }
+  }
+}
+

@@ -1,0 +1,101 @@
+Excellent instincts all around — let’s unpack your concerns and outline your best next steps:
+
+⸻
+
+⚠️ You’re 100% Right:
+
+Adding ACF fields directly to the imported resource posts violates the design integrity of wpFieldFlow.
+
+Why?
+	•	wpFieldFlow is built to sync cleanly from Sheets, with minimal manual override.
+	•	Adding local-only metadata (like quiz scores) breaks that contract.
+	•	Any local ACF scoring would be overwritten on sync, or worse, fall out of sync and confuse staff.
+
+⸻
+
+✅ Instead: Treat QuizFlow as a Plugin Add-On to wpFieldFlow
+
+Yes. You’re absolutely on the right track conceptually.
+
+Here’s how to think about it:
+
+🧩 wpFieldFlow = Content Sync Engine
+	•	Source of truth is the spreadsheet
+	•	Syncs fields → posts + taxonomies
+	•	Layouts and filters still driven by field mapping
+	•	React directory handles display of synced data
+
+🧠 QuizFlow (New Add-On) = Decision Logic Layer
+	•	Optional layer that guides users to content
+	•	Lives on top of the synced resources
+	•	Does not mutate the resource post data
+	•	Does manage its own logic tree, quiz states, scoring, and tag-to-filter mapping
+
+This separation:
+	•	Keeps wpFieldFlow modular and extensible
+	•	Avoids polluting synced data with UI logic
+	•	Makes it easier to plug in QuizFlow for other use cases or orgs
+
+⸻
+
+🧭 How to Continue:
+
+✅ Move this discussion into your wpFieldFlow thread
+
+Because:
+	•	We’re now discussing plugin architecture and extensibility
+	•	This is not specific to NOMA anymore — NOMA is just the first use case
+
+📦 Rename the MVP to QuizFlow
+
+Package it as:
+
+/src/Addons/QuizFlow/
+- QuizFlowManager.php
+- QuizRenderer.php
+- QuizData.php
+/frontend/quiz-app.jsx
+
+Let QuizFlow:
+	•	Load quiz structures from JSON or DB
+	•	Collect answers, calculate tag weights
+	•	Filter existing wpFieldFlow directory results by tag/taxonomy
+
+⸻
+
+🔁 How to Implement Without ACF
+
+You can:
+	•	Store quiz structures and tag logic as JSON (editable in plugin settings)
+	•	Use a scoring config file like:
+
+{
+  "quiz_id": "noma_support",
+  "paths": [
+    {
+      "tags": ["audience:self", "stage:crisis"],
+      "filters": {
+        "resource_tags": ["hotlines", "detox"],
+        "resource_category": ["crisis-support"]
+      },
+      "boost_terms": ["24-hour", "low-barrier"]
+    }
+  ]
+}
+
+	•	Resources still come from the sheet. QuizFlow just filters & scores them at runtime.
+
+⸻
+
+✅ Summary
+
+Concern	Solution
+Contaminating synced posts	✅ Don’t add ACF. Keep posts pure.
+Mixed quiz logic + hardcoding	✅ Break out into QuizFlow add-on
+Future reuse across orgs	✅ Modular plugin design allows reuse
+Scaling UX logic	✅ Score/filter at runtime, not stored data
+
+
+⸻
+
+Would you like me to generate the folder scaffolding + initial PHP class headers + quiz JSON format so you can drop this in as an add-on subfolder of wpFieldFlow?
