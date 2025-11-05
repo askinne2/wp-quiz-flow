@@ -13,8 +13,11 @@ declare(strict_types=1);
 namespace WpQuizFlow\Core;
 
 use WpQuizFlow\Admin\AdminMenu;
+use WpQuizFlow\API\AnalyticsEndpoint;
+use WpQuizFlow\CPT\QuizPostType;
 use WpQuizFlow\Frontend\ShortcodeManager;
 use WpQuizFlow\Quiz\QuizManager;
+use WpQuizFlow\Tracking\QuizSession;
 
 /**
  * Main Plugin Class
@@ -52,6 +55,27 @@ final class Plugin
      * @var QuizManager|null
      */
     private ?QuizManager $quizManager = null;
+    
+    /**
+     * Quiz Post Type instance
+     *
+     * @var QuizPostType|null
+     */
+    private ?QuizPostType $quizPostType = null;
+    
+    /**
+     * Quiz Session Tracking instance
+     *
+     * @var QuizSession|null
+     */
+    private ?QuizSession $quizSession = null;
+    
+    /**
+     * Analytics API Endpoint instance
+     *
+     * @var AnalyticsEndpoint|null
+     */
+    private ?AnalyticsEndpoint $analyticsEndpoint = null;
     
     /**
      * Private constructor to prevent direct instantiation
@@ -109,6 +133,10 @@ final class Plugin
      */
     private function initializeComponents(): void
     {
+        // Initialize Quiz Post Type
+        $this->quizPostType = new QuizPostType();
+        $this->quizPostType->register();
+        
         // Initialize Admin Menu (only in admin area)
         if (is_admin()) {
             $this->adminMenu = new AdminMenu();
@@ -119,6 +147,14 @@ final class Plugin
         
         // Initialize Shortcode Manager
         $this->shortcodeManager = new ShortcodeManager($this->quizManager);
+        
+        // Initialize Quiz Session Tracking
+        $this->quizSession = new QuizSession();
+        $this->quizSession->register();
+        
+        // Initialize Analytics API Endpoint
+        $this->analyticsEndpoint = new AnalyticsEndpoint();
+        $this->analyticsEndpoint->register();
     }
     
     /**

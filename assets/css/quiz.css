@@ -369,6 +369,29 @@
   color: var(--wff-white, #ffffff);
 }
 
+.wp-quiz-flow-share,
+.wp-field-flow-quiz-share {
+  background: var(--wff-primary, #2271b1);
+  color: var(--wff-white, #ffffff);
+  border: 2px solid transparent;
+  border-radius: var(--wff-border-radius, 0.375rem);
+  font-size: var(--wff-font-size-base, 1rem);
+  font-weight: 600;
+  padding: var(--wff-space-2, 0.5rem) var(--wff-space-4, 1rem);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wff-space-2, 0.5rem);
+  transition: all 0.2s ease;
+}
+
+.wp-quiz-flow-share:hover,
+.wp-field-flow-quiz-share:hover {
+  background: #135e96;
+  transform: scale(1.05);
+  box-shadow: var(--wff-shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
+}
+
 /* ==========================================================================
    Error State
    ========================================================================== */
@@ -391,6 +414,45 @@
 }
 
 /* ==========================================================================
+   Accessibility Enhancements
+   ========================================================================== */
+
+.wp-field-flow-quiz-option:focus,
+.wp-field-flow-quiz-button:focus {
+  outline: 3px solid var(--wff-primary, #2271b1);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.2);
+}
+
+.wp-field-flow-quiz-option:focus-visible {
+  outline: 3px solid var(--wff-primary, #2271b1);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .wp-field-flow-quiz-option {
+    border: 2px solid currentColor;
+  }
+  
+  .wp-field-flow-quiz-option:hover,
+  .wp-field-flow-quiz-option:focus {
+    border-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .wp-quiz-flow,
+  .wp-field-flow-quiz,
+  .wp-field-flow-quiz-option,
+  .wp-field-flow-quiz-button {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ==========================================================================
    Mobile Responsive
    ========================================================================== */
 
@@ -410,6 +472,21 @@
   .wp-field-flow-quiz-option {
     font-size: var(--wff-font-size-base, 1rem);
     padding: var(--wff-space-4, 1rem) var(--wff-space-5, 1.25rem);
+    /* Enhanced touch targets for mobile (minimum 44x44px) */
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* Touch-friendly spacing */
+  .wp-field-flow-quiz-options {
+    gap: var(--wff-space-4, 1rem);
+  }
+  
+  /* Improved touch feedback */
+  .wp-field-flow-quiz-option:active {
+    transform: scale(0.98);
+    background: var(--wff-gray-100, #f3f4f6);
   }
   
   .wp-quiz-flow-option-emoji,

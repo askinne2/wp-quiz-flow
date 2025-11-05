@@ -45,7 +45,84 @@ if (!defined('ABSPATH')) {
                 </div>
             </div>
         </div>
+        
+        <?php if (isset($analyticsData['overall'])): ?>
+            <div class="stats-card" style="background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 4px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="dashicons dashicons-chart-line" style="font-size: 32px; color: #2271b1;"></span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 28px;"><?php echo esc_html($analyticsData['overall']['total_sessions'] ?? 0); ?></h3>
+                        <p style="margin: 5px 0 0; color: #666;"><?php esc_html_e('Total Quiz Sessions', 'wp-quiz-flow'); ?></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-card" style="background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 4px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span class="dashicons dashicons-yes-alt" style="font-size: 32px; color: #00a32a;"></span>
+                    <div>
+                        <h3 style="margin: 0; font-size: 28px;"><?php echo esc_html($analyticsData['overall']['completion_rate'] ?? 0); ?>%</h3>
+                        <p style="margin: 5px 0 0; color: #666;"><?php esc_html_e('Completion Rate', 'wp-quiz-flow'); ?></p>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
+    
+    <!-- Analytics Section -->
+    <?php if (isset($analyticsData['overall']) && $analyticsData['overall']['total_sessions'] > 0): ?>
+        <div class="wp-quiz-flow-section" style="background: #fff; border: 1px solid #ddd; padding: 20px; margin: 20px 0; border-radius: 4px;">
+            <h2><?php esc_html_e('Analytics Overview', 'wp-quiz-flow'); ?></h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div>
+                    <h3><?php esc_html_e('Session Statistics', 'wp-quiz-flow'); ?></h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                            <strong><?php esc_html_e('Total Sessions:', 'wp-quiz-flow'); ?></strong>
+                            <?php echo esc_html($analyticsData['overall']['total_sessions'] ?? 0); ?>
+                        </li>
+                        <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                            <strong><?php esc_html_e('Completed Sessions:', 'wp-quiz-flow'); ?></strong>
+                            <?php echo esc_html($analyticsData['overall']['completed_sessions'] ?? 0); ?>
+                        </li>
+                        <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+                            <strong><?php esc_html_e('Completion Rate:', 'wp-quiz-flow'); ?></strong>
+                            <?php echo esc_html($analyticsData['overall']['completion_rate'] ?? 0); ?>%
+                        </li>
+                        <li style="padding: 10px 0;">
+                            <strong><?php esc_html_e('Avg Results per Session:', 'wp-quiz-flow'); ?></strong>
+                            <?php echo esc_html($analyticsData['overall']['avg_result_count'] ?? 0); ?>
+                        </li>
+                    </ul>
+                </div>
+                
+                <?php if (!empty($analyticsData['by_quiz'])): ?>
+                    <div>
+                        <h3><?php esc_html_e('Per-Quiz Statistics', 'wp-quiz-flow'); ?></h3>
+                        <table class="wp-list-table widefat fixed striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e('Quiz ID', 'wp-quiz-flow'); ?></th>
+                                    <th><?php esc_html_e('Sessions', 'wp-quiz-flow'); ?></th>
+                                    <th><?php esc_html_e('Completed', 'wp-quiz-flow'); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($analyticsData['by_quiz'], 0, 5) as $quizStat): ?>
+                                    <tr>
+                                        <td><code><?php echo esc_html($quizStat['quiz_id'] ?? ''); ?></code></td>
+                                        <td><?php echo esc_html($quizStat['total_sessions'] ?? 0); ?></td>
+                                        <td><?php echo esc_html($quizStat['completed_sessions'] ?? 0); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <!-- Available Quizzes -->
     <?php if (!empty($stats['available_quizzes'])): ?>

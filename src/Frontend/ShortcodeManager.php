@@ -240,87 +240,37 @@ class ShortcodeManager
             );
         }
         
-        // Enqueue React and ReactDOM from CDN (if not already loaded)
-        if (!wp_script_is('react', 'enqueued')) {
+        // Enqueue wpFieldFlow bundled components from /dist (includes React and all components)
+        // This uses the updated wpFieldFlow loading logic from /dist/frontend-components.min.js
+        if (defined('WP_FIELD_FLOW_PLUGIN_URL') && defined('WP_FIELD_FLOW_VERSION')) {
+            // Enqueue bundled frontend components (includes React and all components)
+            // Components are bundled via webpack and exposed via window.wpFieldFlowComponents
             wp_enqueue_script(
-                'react',
-                'https://unpkg.com/react@18/umd/react.development.js',
+                'wp-field-flow-frontend-components',
+                WP_FIELD_FLOW_PLUGIN_URL . 'assets/js/dist/frontend-components.min.js',
                 [],
-                '18.0.0',
+                WP_FIELD_FLOW_VERSION, // Proper version-based cache busting
                 true
             );
         }
         
-        if (!wp_script_is('react-dom', 'enqueued')) {
-            wp_enqueue_script(
-                'react-dom',
-                'https://unpkg.com/react-dom@18/umd/react-dom.development.js',
-                ['react'],
-                '18.0.0',
-                true
-            );
-        }
-        
-        // Enqueue wpFieldFlow components (as dependencies)
-        // Note: These should be loaded by wpFieldFlow, but we ensure they're available
-        if (defined('WP_FIELD_FLOW_PLUGIN_URL')) {
-            wp_enqueue_script(
-                'wp-field-flow-loading-spinner',
-                WP_FIELD_FLOW_PLUGIN_URL . 'assets/js/components/LoadingSpinner.jsx?v=' . time(),
-                ['react', 'react-dom'],
-                WP_FIELD_FLOW_VERSION ?? '1.0.0',
-                true
-            );
-            
-            wp_enqueue_script(
-                'wp-field-flow-resource-card',
-                WP_FIELD_FLOW_PLUGIN_URL . 'assets/js/components/ResourceCard.jsx?v=' . time(),
-                ['react', 'react-dom'],
-                WP_FIELD_FLOW_VERSION ?? '1.0.0',
-                true
-            );
-            
-            wp_enqueue_script(
-                'wp-field-flow-search-filter',
-                WP_FIELD_FLOW_PLUGIN_URL . 'assets/js/components/SearchFilter.jsx?v=' . time(),
-                ['react', 'react-dom'],
-                WP_FIELD_FLOW_VERSION ?? '1.0.0',
-                true
-            );
-            
-            wp_enqueue_script(
-                'wp-field-flow-pagination',
-                WP_FIELD_FLOW_PLUGIN_URL . 'assets/js/components/Pagination.jsx?v=' . time(),
-                ['react', 'react-dom'],
-                WP_FIELD_FLOW_VERSION ?? '1.0.0',
-                true
-            );
-            
-            wp_enqueue_script(
-                'wp-field-flow-directory',
-                WP_FIELD_FLOW_PLUGIN_URL . 'assets/js/components/ResourceDirectory.jsx?v=' . time(),
-                ['wp-field-flow-loading-spinner', 'wp-field-flow-resource-card', 'wp-field-flow-search-filter', 'wp-field-flow-pagination'],
-                WP_FIELD_FLOW_VERSION ?? '1.0.0',
-                true
-            );
-        }
-        
-        // Enqueue QuizNavigator component (wpQuizFlow specific)
+        // Enqueue bundled quiz components (includes QuizNavigator and React)
+        // Components are bundled via webpack and exposed via window.wpQuizFlowComponents
         wp_enqueue_script(
-            'wp-quiz-flow-navigator',
-            WP_QUIZ_FLOW_PLUGIN_URL . 'assets/js/components/QuizNavigator.jsx?v=' . time(),
-            ['wp-field-flow-directory'],
-            WP_QUIZ_FLOW_VERSION,
+            'wp-quiz-flow-components',
+            WP_QUIZ_FLOW_PLUGIN_URL . 'assets/js/dist/quiz-components.min.js',
+            defined('WP_FIELD_FLOW_VERSION') ? ['wp-field-flow-frontend-components'] : [],
+            WP_QUIZ_FLOW_VERSION, // Proper version-based cache busting
             true
         );
         
-        // Main quiz app initialization script
-        $cacheKey = time() . '_' . wp_rand();
+        // Enqueue main quiz app initialization script
+        // This depends on the components bundle being loaded first
         wp_enqueue_script(
             'wp-quiz-flow-app',
-            WP_QUIZ_FLOW_PLUGIN_URL . 'assets/js/quiz-app.js?v=' . $cacheKey,
-            ['wp-quiz-flow-navigator'],
-            WP_QUIZ_FLOW_VERSION,
+            WP_QUIZ_FLOW_PLUGIN_URL . 'assets/js/dist/quiz-app.min.js',
+            ['wp-quiz-flow-components'],
+            WP_QUIZ_FLOW_VERSION, // Proper version-based cache busting
             true
         );
         
@@ -355,8 +305,29 @@ class ShortcodeManager
         $nonceAction = 'wp_quiz_flow_frontend';
         $freshNonce = wp_create_nonce($nonceAction);
         
-        // Get quiz data
-        $quizData = $this->quizManager->getQuizData($atts['quiz_id'] ?? 'noma-quiz');
+        // Get quiz data (with caching)
+        $quizId = $atts['quiz_id'] ?? 'noma-quiz';
+        $cacheKey = 'wp_quiz_flow_quiz_' . md5($quizId);
+        $quizData = get_transient($cacheKey);
+        
+        if ($quizData === false) {
+            $quizData = $this->quizManager->getQuizData($quizId);
+            // Cache for 1 hour
+            set_transient($cacheKey, $quizData, HOUR_IN_SECONDS);
+        }
+        
+        // Get tag mapping from TagMapper (single source of truth)
+        // Includes both explicit mappings and grouping patterns
+        // Cache tag mapping (rarely changes)
+        $tagMappingCacheKey = 'wp_quiz_flow_tag_mapping';
+        $tagMapping = get_transient($tagMappingCacheKey);
+        
+        if ($tagMapping === false) {
+            $tagMapper = $this->quizManager->getTagMapper();
+            $tagMapping = $tagMapper->getMappingWithGroups();
+            // Cache for 24 hours
+            set_transient($tagMappingCacheKey, $tagMapping, DAY_IN_SECONDS);
+        }
         
         // Localize script data
         wp_localize_script('wp-quiz-flow-app', 'wpQuizFlowData', [
@@ -369,6 +340,7 @@ class ShortcodeManager
             'sheetConfig' => $sheetConfig,
             'layoutConfig' => $layoutConfig,
             'quizData' => $quizData,
+            'tagMapping' => $tagMapping,
             'shortcodeAtts' => $atts,
             'strings' => [
                 'loading' => __('Loading...', 'wp-quiz-flow'),

@@ -57,26 +57,46 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeQuizApp(container, appData) {
     try {
         // Check if QuizNavigator is available
-        if (typeof window.QuizNavigator === 'undefined') {
-            console.error('wpQuizFlow: QuizNavigator component not found');
+        // Try namespace first (bundled approach), then global fallback
+        const QuizNavigator = window.wpQuizFlowComponents?.QuizNavigator || window.QuizNavigator;
+        if (typeof QuizNavigator === 'undefined') {
+            console.error('wpQuizFlow: QuizNavigator component not found - ensure quiz-components bundle is loaded');
+            console.error('wpQuizFlow: Available components:', window.wpQuizFlowComponents);
             showError(container, 'Quiz component not loaded properly');
             return;
         }
         
         // Check if wpFieldFlow ResourceDirectory is available
-        if (typeof window.ResourceDirectory === 'undefined') {
+        // wpFieldFlow now exposes components via window.wpFieldFlowComponents
+        const ResourceDirectory = window.wpFieldFlowComponents?.ResourceDirectory || window.ResourceDirectory;
+        if (typeof ResourceDirectory === 'undefined') {
             console.error('wpQuizFlow: ResourceDirectory component not found (requires wpFieldFlow)');
+            console.error('wpQuizFlow: Available components:', window.wpFieldFlowComponents);
             showError(container, 'wpFieldFlow plugin is required. Please install and activate wpFieldFlow.');
             return;
         }
         
-        const component = window.QuizNavigator;
+        const component = QuizNavigator;
+        
+        // Verify component is a valid React component
+        if (typeof component !== 'function') {
+            console.error('wpQuizFlow: QuizNavigator is not a function', {
+                component,
+                type: typeof component,
+                QuizNavigator: window.QuizNavigator,
+                wpQuizFlowComponents: window.wpQuizFlowComponents
+            });
+            showError(container, 'Quiz component is invalid');
+            return;
+        }
+        
         const componentProps = {
             sheetId: appData.sheetId,
             quizId: appData.quiz_id || 'noma-quiz',
             config: appData.sheetConfig,
             layoutConfig: appData.layoutConfig || {},
             quizData: appData.quizData || null,
+            tagMapping: appData.tagMapping || {},
             atts: appData.shortcodeAtts || {},
             strings: appData.strings || {},
             ajaxUrl: appData.ajaxUrl,
@@ -85,9 +105,43 @@ function initializeQuizApp(container, appData) {
         };
         
         console.log('wpQuizFlow: Initializing QuizNavigator for sheet', appData.sheetId);
+        console.log('wpQuizFlow: Component props', {
+            sheetId: componentProps.sheetId,
+            quizId: componentProps.quizId,
+            hasConfig: !!componentProps.config,
+            hasQuizData: !!componentProps.quizData,
+            hasTagMapping: !!componentProps.tagMapping,
+            React: typeof React,
+            ReactDOM: typeof ReactDOM,
+            component: typeof component
+        });
+
+        // Verify React is available
+        if (!React || !ReactDOM) {
+            console.error('wpQuizFlow: React or ReactDOM not available', {
+                React: typeof React,
+                ReactDOM: typeof ReactDOM,
+                windowReact: typeof window.React,
+                windowReactDOM: typeof window.ReactDOM
+            });
+            showError(container, 'React is not available');
+            return;
+        }
 
         // Create React element
         const element = React.createElement(component, componentProps);
+        
+        // Verify element is valid
+        if (!element || typeof element !== 'object') {
+            console.error('wpQuizFlow: Invalid React element created', {
+                element,
+                type: typeof element,
+                component,
+                props: componentProps
+            });
+            showError(container, 'Failed to create React element');
+            return;
+        }
 
         // Render React component
         const root = ReactDOM.createRoot(container);

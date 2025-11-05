@@ -57,6 +57,11 @@ final class AdminMenu
         add_action('admin_init', [$this, 'initializeSettings']);
         add_action('admin_notices', [$this, 'displayAdminNotices']);
         add_filter('plugin_action_links_' . WP_QUIZ_FLOW_PLUGIN_BASENAME, [$this, 'addPluginActionLinks']);
+        
+        // AJAX handlers for quiz management
+        add_action('wp_ajax_wp_quiz_flow_duplicate_quiz', [$this, 'handleDuplicateQuiz']);
+        add_action('wp_ajax_wp_quiz_flow_export_quiz', [$this, 'handleExportQuiz']);
+        add_action('wp_ajax_wp_quiz_flow_delete_quiz', [$this, 'handleDeleteQuiz']);
     }
     
     /**
@@ -96,6 +101,26 @@ final class AdminMenu
             self::REQUIRED_CAPABILITY,
             'wp-quiz-flow-quizzes',
             [$this, 'renderQuizzesPage']
+        );
+        
+        // Add New Quiz submenu (links to CPT)
+        add_submenu_page(
+            'wp-quiz-flow',
+            __('Add New Quiz', 'wp-quiz-flow'),
+            __('Add New Quiz', 'wp-quiz-flow'),
+            self::REQUIRED_CAPABILITY,
+            'post-new.php?post_type=wp_quiz_flow_quiz',
+            null
+        );
+        
+        // All Quizzes submenu (links to CPT list)
+        add_submenu_page(
+            'wp-quiz-flow',
+            __('All Quizzes', 'wp-quiz-flow'),
+            __('All Quizzes', 'wp-quiz-flow'),
+            self::REQUIRED_CAPABILITY,
+            'edit.php?post_type=wp_quiz_flow_quiz',
+            null
         );
         
         // Settings submenu
@@ -151,6 +176,10 @@ final class AdminMenu
         // Get quiz statistics
         $stats = $this->getDashboardStats();
         $settings = $this->settingsManager->getSettings();
+        
+        // Get analytics data
+        $analytics = new \WpQuizFlow\Admin\Analytics();
+        $analyticsData = $analytics->getDashboardStats();
         
         include WP_QUIZ_FLOW_PLUGIN_DIR . 'templates/admin/dashboard.php';
     }
@@ -312,6 +341,138 @@ final class AdminMenu
     public function getSettingsManager(): SettingsManager
     {
         return $this->settingsManager;
+    }
+    
+    /**
+     * Handle duplicate quiz AJAX request
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    public function handleDuplicateQuiz(): void
+    {
+        check_ajax_referer('wp_quiz_flow_admin', 'nonce');
+        
+        if (!current_user_can(self::REQUIRED_CAPABILITY)) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        $quizId = sanitize_text_field($_POST['quiz_id'] ?? '');
+        if (empty($quizId)) {
+            wp_send_json_error(['message' => __('Quiz ID is required', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Load quiz from database or JSON
+        $quizData = new \WpQuizFlow\Quiz\QuizData();
+        $quiz = $quizData->loadQuiz($quizId);
+        
+        if (!$quiz) {
+            wp_send_json_error(['message' => __('Quiz not found', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Create new post
+        $newPostId = wp_insert_post([
+            'post_title' => $quiz['title'] . ' (Copy)',
+            'post_content' => $quiz['description'] ?? '',
+            'post_status' => 'publish',
+            'post_type' => 'wp_quiz_flow_quiz'
+        ]);
+        
+        if (is_wp_error($newPostId)) {
+            wp_send_json_error(['message' => __('Failed to duplicate quiz', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Copy meta data
+        $newQuizId = $quizId . '-copy-' . time();
+        update_post_meta($newPostId, '_quiz_id', $newQuizId);
+        update_post_meta($newPostId, '_quiz_structure', wp_json_encode($quiz, JSON_PRETTY_PRINT));
+        update_post_meta($newPostId, '_quiz_version', $quiz['version'] ?? '1.0.0');
+        update_post_meta($newPostId, '_target_sheet_id', $quiz['target_sheet_id'] ?? '');
+        
+        wp_send_json_success([
+            'message' => __('Quiz duplicated successfully', 'wp-quiz-flow'),
+            'post_id' => $newPostId,
+            'edit_url' => admin_url('post.php?post=' . $newPostId . '&action=edit')
+        ]);
+    }
+    
+    /**
+     * Handle export quiz AJAX request
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    public function handleExportQuiz(): void
+    {
+        check_ajax_referer('wp_quiz_flow_admin', 'nonce');
+        
+        if (!current_user_can(self::REQUIRED_CAPABILITY)) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        $quizId = sanitize_text_field($_POST['quiz_id'] ?? '');
+        if (empty($quizId)) {
+            wp_send_json_error(['message' => __('Quiz ID is required', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Load quiz
+        $quizData = new \WpQuizFlow\Quiz\QuizData();
+        $quiz = $quizData->loadQuiz($quizId);
+        
+        if (!$quiz) {
+            wp_send_json_error(['message' => __('Quiz not found', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Return JSON
+        wp_send_json_success([
+            'quiz' => $quiz,
+            'json' => wp_json_encode($quiz, JSON_PRETTY_PRINT)
+        ]);
+    }
+    
+    /**
+     * Handle delete quiz AJAX request
+     *
+     * @since 1.0.0
+     * @return void
+     */
+    public function handleDeleteQuiz(): void
+    {
+        check_ajax_referer('wp_quiz_flow_admin', 'nonce');
+        
+        if (!current_user_can(self::REQUIRED_CAPABILITY)) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        $postId = intval($_POST['post_id'] ?? 0);
+        if (!$postId) {
+            wp_send_json_error(['message' => __('Post ID is required', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Check post type
+        if (get_post_type($postId) !== 'wp_quiz_flow_quiz') {
+            wp_send_json_error(['message' => __('Invalid post type', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        // Delete post
+        $result = wp_delete_post($postId, true);
+        
+        if (!$result) {
+            wp_send_json_error(['message' => __('Failed to delete quiz', 'wp-quiz-flow')]);
+            return;
+        }
+        
+        wp_send_json_success(['message' => __('Quiz deleted successfully', 'wp-quiz-flow')]);
     }
 }
 

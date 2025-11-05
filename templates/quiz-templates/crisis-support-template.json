@@ -1,0 +1,39 @@
+{
+  "template_id": "crisis-support-template",
+  "name": "Crisis Support Quiz",
+  "description": "Template for crisis support resource finding",
+  "category": "crisis",
+  "version": "1.0.0",
+  "quiz_structure": {
+    "quiz_id": "crisis-support",
+    "version": "1.0.0",
+    "title": "Find Crisis Support Resources",
+    "description": "Quick quiz to find immediate crisis support resources",
+    "target_sheet_id": 2,
+    "questions": {
+      "Q1": {
+        "type": "question",
+        "text": "Are you or someone you know in immediate crisis?",
+        "subtitle": "We're here to help right now",
+        "options": [
+          {
+            "id": "A",
+            "text": "Yes, I need immediate help",
+            "next": "RESULTS",
+            "tags": ["stage:crisis", "need:immediate"],
+            "priority": "urgent",
+            "emoji": "🚨"
+          },
+          {
+            "id": "B",
+            "text": "I'm looking for support resources",
+            "next": "RESULTS",
+            "tags": ["stage:exploration", "need:education"],
+            "emoji": "📚"
+          }
+        ]
+      }
+    }
+  }
+}
+

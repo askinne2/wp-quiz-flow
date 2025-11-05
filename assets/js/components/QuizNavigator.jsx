@@ -9,6 +9,18 @@
  * @since 1.0.0
  */
 
+// Use React from window (provided by wpFieldFlow)
+// Don't import React to avoid externals complexity with JSX transformation
+// Instead, access it directly from window and let babel use it for JSX
+const React = window.React;
+
+if (!React) {
+    throw new Error('React not available - ensure wpFieldFlow is loaded first');
+}
+
+// Get hooks from window.React
+const { useState, useEffect, useMemo, useCallback } = React;
+
 function QuizNavigator({ 
     sheetId, 
     config, 
@@ -17,16 +29,18 @@ function QuizNavigator({
     strings = {}, 
     ajaxUrl, 
     restUrl, 
-    nonce 
+    nonce,
+    quizData = null,
+    tagMapping = {}
 }) {
-    const { useState, useEffect, useMemo, useCallback } = React;
-    
-    // State management
+    // State management (hooks are from window.React)
     const [currentNodeId, setCurrentNodeId] = useState('Q1');
     const [userPath, setUserPath] = useState([]);
     const [collectedTags, setCollectedTags] = useState([]);
     const [showResults, setShowResults] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [quizError, setQuizError] = useState(null);
+    const [sessionId, setSessionId] = useState(null);
     
     // Configuration
     const showProgress = atts.show_progress !== 'false';
@@ -34,268 +48,77 @@ function QuizNavigator({
     
     /**
      * Tag to Taxonomy Mapping
-     * Translates quiz tags to WordPress taxonomy filters
-     * Updated with actual NOMA taxonomy terms (Oct 31, 2025)
+     * Received from PHP via wp_localize_script - single source of truth
+     * Supports pattern matching for grouped tags (e.g., audience:* → audience_group)
      */
-    const tagToTaxonomyMap = {
-        // Audience tags → resource_tags
-        'audience:self': { 
-            resource_tags: ['for-people-in-recovery'] 
-        },
-        'audience:family': { 
-            resource_tags: ['for-families', 'for-parents-caregivers'] 
-        },
-        'audience:parent': { 
-            resource_tags: ['for-parents-caregivers'] 
-        },
-        'audience:partner': { 
-            resource_tags: ['for-families'] 
-        },
-        'audience:professional': { 
-            resource_tags: ['helpful-articles', 'evidence-based'] 
-        },
-        
-        // Stage tags → resource_category + resource_tags
-        'stage:crisis': { 
-            resource_category: ['help-with-treatment'],
-            resource_tags: ['interventions', 'treatment'] 
-        },
-        'stage:exploration': { 
-            resource_category: ['literature'],
-            resource_tags: ['helpful-articles', 'websites', 'downloadable-pdfs'] 
-        },
-        'stage:active_treatment': { 
-            resource_category: ['treatment-programs', 'help-with-treatment'],
-            resource_tags: ['detox', 'residential', 'outpatient', 'treatment'] 
-        },
-        'stage:recovery': { 
-            resource_category: ['support-groups'],
-            resource_tags: ['for-people-in-recovery', 'recovery-books'] 
-        },
-        'stage:contemplation': { 
-            resource_category: ['literature'],
-            resource_tags: ['helpful-articles', 'interventions'] 
-        },
-        
-        // Need tags → resource_category + resource_tags
-        'need:immediate': { 
-            resource_category: ['help-with-treatment'],
-            resource_tags: ['interventions', 'treatment'] 
-        },
-        'need:counseling': { 
-            resource_category: ['treatment-programs'],
-            resource_tags: ['outpatient', 'evidence-based'] 
-        },
-        'need:education': { 
-            resource_category: ['literature'],
-            resource_tags: ['helpful-articles', 'websites', 'downloadable-pdfs', 'podcasts'] 
-        },
-        'need:peer_support': { 
-            resource_category: ['support-groups'],
-            resource_tags: ['for-people-in-recovery', '12-step-based'] 
-        },
-        'need:medical_detox': { 
-            resource_tags: ['detox', 'opoid-treatment', 'medically-assisted'] 
-        },
-        'need:treatment_navigation': { 
-            resource_category: ['help-with-treatment', 'treatment-programs'],
-            resource_tags: ['treatment'] 
-        },
-        'need:intervention': { 
-            resource_tags: ['interventions', 'for-families'] 
-        },
-        'need:grief': { 
-            resource_tags: ['grief-support'] 
-        },
-        'need:life_skills': { 
-            resource_category: ['collegiate-recovery'],
-            resource_tags: ['recovery-residence', 'sober-living', 'extended-care'] 
-        }
-    };
+    const tagToTaxonomyMap = tagMapping || {};
     
     /**
-     * NOMA Quiz Structure (Simplified for MVP)
-     * Full structure available in docs-roadmap/example-quiz.md
+     * Load quiz structure from quizData prop
+     * Transforms JSON quiz structure to internal format
      */
-    const quizStructure = {
-        'Q1': {
-            type: 'question',
-            text: "Let's help you find the right resources. Who are you looking to support?",
-            subtitle: "We're here to help",
-            options: [
-                {
-                    id: 'A',
-                    text: 'Myself',
-                    next: 'Q2-SELF',
-                    tags: ['audience:self'],
-                    emoji: '🙋'
-                },
-                {
-                    id: 'B',
-                    text: 'Someone I care about',
-                    next: 'Q2-FAMILY',
-                    tags: ['audience:family'],
-                    emoji: '👨‍👩‍👧'
-                },
-                {
-                    id: 'C',
-                    text: "I'm a professional seeking resources",
-                    next: 'RESULTS',
-                    tags: ['audience:professional'],
-                    emoji: '💼'
-                }
-            ]
-        },
-        
-        // Path A: Supporting Myself
-        'Q2-SELF': {
-            type: 'question',
-            text: "Thank you for reaching out. Where are you in your journey?",
-            subtitle: "There's no wrong answer",
-            options: [
-                {
-                    id: 'A1',
-                    text: "I'm in crisis and need immediate help",
-                    next: 'RESULTS',
-                    tags: ['stage:crisis', 'need:immediate'],
-                    priority: 'urgent',
-                    emoji: '🚨'
-                },
-                {
-                    id: 'A2',
-                    text: "I'm considering making a change",
-                    next: 'Q3-CONSIDERING',
-                    tags: ['stage:contemplation'],
-                    emoji: '🤔'
-                },
-                {
-                    id: 'A3',
-                    text: "I'm in recovery and looking for support",
-                    next: 'Q3-RECOVERY',
-                    tags: ['stage:recovery'],
-                    emoji: '🌱'
-                }
-            ]
-        },
-        
-        'Q3-CONSIDERING': {
-            type: 'question',
-            text: "What feels like the right next step for you?",
-            subtitle: "Take your time",
-            options: [
-                {
-                    id: 'B1',
-                    text: 'I want to understand my options',
-                    next: 'RESULTS',
-                    tags: ['stage:exploration', 'need:education'],
-                    emoji: '📚'
-                },
-                {
-                    id: 'B2',
-                    text: "I'm ready to talk to someone",
-                    next: 'RESULTS',
-                    tags: ['stage:contemplation', 'need:counseling'],
-                    emoji: '💬'
-                },
-                {
-                    id: 'B3',
-                    text: 'I need medical help to stop safely',
-                    next: 'RESULTS',
-                    tags: ['stage:active_treatment', 'need:medical_detox'],
-                    priority: 'high',
-                    emoji: '🏥'
-                }
-            ]
-        },
-        
-        'Q3-RECOVERY': {
-            type: 'question',
-            text: "That's wonderful. What kind of support would help you most?",
-            subtitle: "We're proud of you",
-            options: [
-                {
-                    id: 'C1',
-                    text: 'Connection with others in recovery',
-                    next: 'RESULTS',
-                    tags: ['stage:recovery', 'need:peer_support'],
-                    emoji: '🤝'
-                },
-                {
-                    id: 'C2',
-                    text: 'Professional counseling or therapy',
-                    next: 'RESULTS',
-                    tags: ['stage:recovery', 'need:counseling'],
-                    emoji: '🧠'
-                },
-                {
-                    id: 'C3',
-                    text: 'Practical life support (housing, job, etc.)',
-                    next: 'RESULTS',
-                    tags: ['stage:recovery', 'need:life_skills'],
-                    emoji: '🏠'
-                }
-            ]
-        },
-        
-        // Path B: Supporting Family
-        'Q2-FAMILY': {
-            type: 'question',
-            text: "Your care and concern matter. What's your most pressing need right now?",
-            subtitle: "You're not alone in this",
-            options: [
-                {
-                    id: 'D1',
-                    text: 'Understanding what\'s happening',
-                    next: 'RESULTS',
-                    tags: ['stage:exploration', 'need:education'],
-                    emoji: '📖'
-                },
-                {
-                    id: 'D2',
-                    text: 'Getting them into treatment',
-                    next: 'Q3-TREATMENT',
-                    tags: ['stage:active_treatment', 'need:treatment_navigation'],
-                    emoji: '🎯'
-                },
-                {
-                    id: 'D3',
-                    text: 'Support for myself',
-                    next: 'RESULTS',
-                    tags: ['need:peer_support'],
-                    emoji: '💚'
-                }
-            ]
-        },
-        
-        'Q3-TREATMENT': {
-            type: 'question',
-            text: "Is your loved one open to getting help?",
-            subtitle: "This will help us guide you better",
-            options: [
-                {
-                    id: 'E1',
-                    text: "Yes, they're ready",
-                    next: 'RESULTS',
-                    tags: ['stage:active_treatment', 'need:treatment_navigation'],
-                    emoji: '✅'
-                },
-                {
-                    id: 'E2',
-                    text: "No, they're resistant",
-                    next: 'RESULTS',
-                    tags: ['stage:contemplation', 'need:intervention'],
-                    emoji: '🛡️'
-                },
-                {
-                    id: 'E3',
-                    text: "I'm not sure",
-                    next: 'RESULTS',
-                    tags: ['stage:exploration', 'need:education'],
-                    emoji: '❓'
-                }
-            ]
+    const quizStructure = useMemo(() => {
+        if (!quizData) {
+            setQuizError('Quiz data not loaded');
+            return {};
         }
-    };
+        
+        if (!quizData.questions || typeof quizData.questions !== 'object') {
+            setQuizError('Invalid quiz structure: missing questions');
+            return {};
+        }
+        
+        // Transform questions object to quiz structure format
+        // The JSON structure already matches what we need
+        return quizData.questions;
+    }, [quizData]);
+    
+    // Validate quiz structure on load
+    useEffect(() => {
+        if (!quizData) {
+            setQuizError('Error: Quiz data not available. Please check quiz configuration.');
+            return;
+        }
+        
+        // Validate required fields
+        if (!quizData.quiz_id) {
+            setQuizError('Error: Quiz ID missing from quiz data');
+            return;
+        }
+        
+        if (!quizData.questions || typeof quizData.questions !== 'object') {
+            setQuizError('Error: Quiz questions structure is invalid');
+            return;
+        }
+        
+        // Validate that starting question exists
+        if (!quizData.questions['Q1']) {
+            setQuizError('Error: Starting question Q1 not found in quiz');
+            return;
+        }
+        
+        // Validate each question has required fields
+        let hasErrors = false;
+        Object.entries(quizData.questions).forEach(([qId, question]) => {
+            if (!question.type || !question.text || !Array.isArray(question.options)) {
+                console.error(`wpQuizFlow: Invalid question structure for ${qId}`, question);
+                hasErrors = true;
+            }
+            
+            question.options?.forEach((option, optIndex) => {
+                if (!option.id || !option.text || !option.next) {
+                    console.error(`wpQuizFlow: Invalid option structure for ${qId}[${optIndex}]`, option);
+                    hasErrors = true;
+                }
+            });
+        });
+        
+        if (hasErrors) {
+            setQuizError('Error: Quiz structure validation failed. Check console for details.');
+        } else {
+            setQuizError(null);
+        }
+    }, [quizData]);
     
     // Get current node
     const currentNode = quizStructure[currentNodeId];
@@ -306,6 +129,7 @@ function QuizNavigator({
     
     /**
      * Convert collected tags to taxonomy filters
+     * Supports explicit tag mappings and pattern-based grouping (e.g., audience:* → audience_group)
      */
     const buildTaxonomyFilters = useCallback(() => {
         const filters = {
@@ -314,10 +138,23 @@ function QuizNavigator({
         };
         
         collectedTags.forEach(tag => {
-            const mapping = tagToTaxonomyMap[tag];
+            // First try exact match
+            let mapping = tagToTaxonomyMap[tag];
+            
+            // If no exact match, try pattern matching for grouped tags
+            if (!mapping && tag.includes(':')) {
+                const [prefix] = tag.split(':');
+                const patternKey = `${prefix}:*`;
+                mapping = tagToTaxonomyMap[patternKey];
+            }
+            
             if (mapping) {
                 Object.entries(mapping).forEach(([taxonomy, terms]) => {
                     if (Array.isArray(terms)) {
+                        // Ensure filters[taxonomy] exists
+                        if (!filters[taxonomy]) {
+                            filters[taxonomy] = [];
+                        }
                         filters[taxonomy] = [...new Set([...filters[taxonomy], ...terms])];
                     }
                 });
@@ -351,8 +188,40 @@ function QuizNavigator({
             setCollectedTags(prev => [...prev, ...option.tags]);
         }
         
+        // Track answer
+        if (sessionId && ajaxUrl && nonce) {
+            fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'wp_quiz_flow_track_session',
+                    track_action: 'answer',
+                    session_id: sessionId,
+                    node_id: currentNodeId,
+                    option_id: option.id,
+                    option_text: option.text,
+                    tags: JSON.stringify(option.tags || []),
+                    nonce: nonce
+                })
+            })
+            .catch(error => {
+                console.error('wpQuizFlow: Failed to track answer', error);
+            });
+            
+            // Track Google Analytics event
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'quiz_answer', {
+                    'quiz_id': quizData?.quiz_id,
+                    'node_id': currentNodeId,
+                    'option_id': option.id
+                });
+            }
+        }
+        
         // Log for debugging
-        console.log('wpFieldFlow: Quiz answer selected', {
+        console.log('wpQuizFlow: Quiz answer selected', {
             option: option.text,
             tags: option.tags,
             next: option.next,
@@ -405,30 +274,127 @@ function QuizNavigator({
         setShowResults(false);
     }, []);
     
-    // Debug logging
+    // Initialize session tracking
     useEffect(() => {
-        console.log('wpFieldFlow: QuizNavigator initialized', {
+        if (!quizData || !quizData.quiz_id) {
+            return;
+        }
+        
+        // Start tracking session
+        if (ajaxUrl && nonce) {
+            fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'wp_quiz_flow_track_session',
+                    track_action: 'start',
+                    quiz_id: quizData.quiz_id,
+                    nonce: nonce
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.session_id) {
+                    setSessionId(data.data.session_id);
+                    
+                    // Track Google Analytics event
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'quiz_start', {
+                            'quiz_id': quizData.quiz_id,
+                            'session_id': data.data.session_id
+                        });
+                    }
+                    
+                    // Track Facebook Pixel event
+                    if (typeof fbq !== 'undefined') {
+                        fbq('track', 'QuizStart', {
+                            quiz_id: quizData.quiz_id
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('wpQuizFlow: Failed to start session tracking', error);
+            });
+        }
+        
+        // Debug logging
+        console.log('wpQuizFlow: QuizNavigator initialized', {
             sheetId,
             currentNode: currentNodeId,
-            collectedTags
+            collectedTags,
+            quizId: quizData?.quiz_id
         });
-    }, []);
+    }, [quizData]);
     
     // Loading state
     if (loading) {
         return React.createElement('div', {
             className: 'wp-field-flow-quiz-container'
-        }, React.createElement(window.LoadingSpinner || 'div', {
+        }, React.createElement(
+            (window.wpFieldFlowComponents?.LoadingSpinner || window.LoadingSpinner) || 'div',
+            {
             message: 'Loading quiz...',
             size: 'large'
         }));
     }
     
+    // Track completion when results are shown
+    useEffect(() => {
+        if (showResults && sessionId && ajaxUrl && nonce) {
+            const taxonomyFilters = buildTaxonomyFilters();
+            const resultLimit = parseInt(atts.result_limit || '12', 10);
+            
+            // Complete session tracking
+            fetch(ajaxUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'wp_quiz_flow_track_session',
+                    track_action: 'complete',
+                    session_id: sessionId,
+                    result_count: resultLimit.toString(),
+                    taxonomy_filters: JSON.stringify(taxonomyFilters),
+                    nonce: nonce
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Track Google Analytics event
+                    if (typeof gtag !== 'undefined') {
+                        gtag('event', 'quiz_complete', {
+                            'quiz_id': quizData?.quiz_id,
+                            'session_id': sessionId,
+                            'result_count': resultLimit,
+                            'collected_tags': collectedTags.length
+                        });
+                    }
+                    
+                    // Track Facebook Pixel event
+                    if (typeof fbq !== 'undefined') {
+                        fbq('track', 'QuizComplete', {
+                            quiz_id: quizData?.quiz_id,
+                            result_count: resultLimit
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('wpQuizFlow: Failed to complete session tracking', error);
+            });
+        }
+    }, [showResults, sessionId, ajaxUrl, nonce, atts, collectedTags, quizData, buildTaxonomyFilters]);
+    
     // Show results
     if (showResults) {
         const taxonomyFilters = buildTaxonomyFilters();
         
-        console.log('wpFieldFlow: Showing quiz results', {
+        console.log('wpQuizFlow: Showing quiz results', {
             collectedTags,
             taxonomyFilters
         });
@@ -456,47 +422,109 @@ function QuizNavigator({
                     React.createElement('button', {
                         key: 'restart',
                         className: 'wp-field-flow-quiz-restart',
-                        onClick: handleRestart
+                        onClick: handleRestart,
+                        'aria-label': 'Start quiz over'
                     }, '← Start Over'),
                     alwaysShowContact && React.createElement('a', {
                         key: 'contact',
                         className: 'wp-field-flow-quiz-contact',
-                        href: 'tel:205-555-0100'
-                    }, '📞 Call NOMA Now')
+                        href: 'tel:' + (atts.contact_number || '205-555-0100'),
+                        'aria-label': 'Call for support'
+                    }, '📞 Call NOMA Now'),
+                    React.createElement('button', {
+                        key: 'share',
+                        className: 'wp-field-flow-quiz-share',
+                        onClick: () => {
+                            const shareData = {
+                                title: 'Quiz Results',
+                                text: 'I found resources that match my needs!',
+                                url: window.location.href
+                            };
+                            
+                            if (navigator.share) {
+                                navigator.share(shareData).catch(() => {
+                                    // Fallback to clipboard
+                                    navigator.clipboard.writeText(window.location.href);
+                                    alert('Link copied to clipboard!');
+                                });
+                            } else {
+                                // Fallback to clipboard
+                                navigator.clipboard.writeText(window.location.href);
+                                alert('Link copied to clipboard!');
+                            }
+                        },
+                        'aria-label': 'Share quiz results'
+                    }, '📤 Share Results')
                 ])
             ]),
             
             // Resource Directory with filters applied
-            React.createElement(window.ResourceDirectory || 'div', {
-                key: 'directory',
-                sheetId,
-                config,
-                layoutConfig,
-                atts: {
-                    ...atts,
-                    show_search: 'true',
-                    show_filters: 'true',
-                    show_title: 'false', // Don't duplicate title
-                    limit: atts.result_limit || '12' // Use shortcode limit or default to 12
-                },
-                strings,
-                ajaxUrl,
-                restUrl,
-                nonce,
-                taxonomyFilters: {
-                    include: taxonomyFilters,
-                    exclude: {},
-                    relation: 'OR' // Match any of the tags
+            // Use wpFieldFlowComponents namespace (new bundled approach)
+            (() => {
+                const ResourceDirectory = window.wpFieldFlowComponents?.ResourceDirectory || window.ResourceDirectory;
+                
+                // Verify ResourceDirectory is a valid component (function or class)
+                if (!ResourceDirectory || (typeof ResourceDirectory !== 'function' && typeof ResourceDirectory !== 'object')) {
+                    console.error('wpQuizFlow: ResourceDirectory component is invalid', {
+                        ResourceDirectory,
+                        wpFieldFlowComponents: window.wpFieldFlowComponents,
+                        windowResourceDirectory: window.ResourceDirectory
+                    });
+                    return React.createElement('div', {
+                        key: 'directory-error',
+                        className: 'wp-quiz-flow-error'
+                    }, 'Error: Resource directory component not available');
                 }
-            })
+                
+                return React.createElement(
+                    ResourceDirectory,
+                    {
+                        key: 'directory',
+                        sheetId,
+                        config,
+                        layoutConfig,
+                        atts: {
+                            ...atts,
+                            show_search: 'true',
+                            show_filters: 'true',
+                            show_title: 'false', // Don't duplicate title
+                            limit: atts.result_limit || '12' // Use shortcode limit or default to 12
+                        },
+                        strings,
+                        ajaxUrl,
+                        restUrl,
+                        nonce,
+                        taxonomyFilters: {
+                            include: taxonomyFilters,
+                            exclude: {},
+                            relation: 'OR' // Match any of the tags
+                        }
+                    }
+                );
+            })()
         ]));
+    }
+    
+    // Show error if quiz failed to load or validate
+    if (quizError) {
+        return React.createElement('div', {
+            className: 'wp-field-flow-quiz-error'
+        }, [
+            React.createElement('h3', { key: 'title' }, 'Error Loading Quiz'),
+            React.createElement('p', { key: 'message' }, quizError),
+            React.createElement('button', {
+                key: 'retry',
+                className: 'wp-field-flow-quiz-button wp-field-flow-quiz-button-primary',
+                onClick: () => window.location.reload()
+            }, strings.retry || 'Retry')
+        ]);
     }
     
     // Show question
     if (!currentNode) {
         return React.createElement('div', {
             className: 'wp-field-flow-quiz-error'
-        }, 'Quiz navigation error');
+        }, 'Quiz navigation error: Question not found');
     }
     
     // Main quiz render
@@ -519,11 +547,14 @@ function QuizNavigator({
         // Question content
         React.createElement('div', {
             key: 'question',
-            className: 'wp-field-flow-quiz-step'
+            className: 'wp-field-flow-quiz-step',
+            role: 'region',
+            'aria-live': 'polite'
         }, [
             React.createElement('h2', {
                 key: 'text',
-                className: 'wp-field-flow-quiz-question'
+                className: 'wp-field-flow-quiz-question',
+                id: 'current-question'
             }, currentNode.text),
             
             currentNode.subtitle && React.createElement('p', {
@@ -534,20 +565,33 @@ function QuizNavigator({
             // Options
             React.createElement('div', {
                 key: 'options',
-                className: 'wp-field-flow-quiz-options'
+                className: 'wp-field-flow-quiz-options',
+                role: 'radiogroup',
+                'aria-label': currentNode.text
             }, currentNode.options.map((option, index) => 
                 React.createElement('button', {
                     key: index,
                     className: `wp-field-flow-quiz-option ${option.priority ? 'priority-' + option.priority : ''}`,
-                    onClick: () => handleAnswer(option)
+                    onClick: () => handleAnswer(option),
+                    onKeyDown: (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleAnswer(option);
+                        }
+                    },
+                    'aria-label': option.text,
+                    'aria-describedby': `option-${index}-description`,
+                    tabIndex: 0
                 }, [
                     option.emoji && React.createElement('span', {
                         key: 'emoji',
-                        className: 'wp-field-flow-quiz-option-emoji'
+                        className: 'wp-field-flow-quiz-option-emoji',
+                        'aria-hidden': 'true'
                     }, option.emoji),
                     React.createElement('span', {
                         key: 'text',
-                        className: 'wp-field-flow-quiz-option-text'
+                        className: 'wp-field-flow-quiz-option-text',
+                        id: `option-${index}-description`
                     }, option.text)
                 ])
             ))
@@ -561,12 +605,26 @@ function QuizNavigator({
             userPath.length > 0 && React.createElement('button', {
                 key: 'back',
                 className: 'wp-field-flow-quiz-button wp-field-flow-quiz-button-secondary',
-                onClick: handleBack
+                onClick: handleBack,
+                onKeyDown: (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleBack();
+                    }
+                },
+                'aria-label': 'Go back to previous question',
+                tabIndex: 0
             }, '← Back')
         ])
     ]));
 }
 
-// Make component available globally
-window.QuizNavigator = QuizNavigator;
+// Export as default for module bundling
+export default QuizNavigator;
+
+// Make component available globally (for backward compatibility)
+// Note: This is also handled in index.js, but kept here for safety
+if (typeof window !== 'undefined') {
+    window.QuizNavigator = QuizNavigator;
+}
 

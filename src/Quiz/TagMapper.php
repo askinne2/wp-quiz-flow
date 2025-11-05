@@ -164,6 +164,7 @@ class TagMapper
     
     /**
      * Map quiz tags to taxonomy filters
+     * Supports explicit tag mappings and pattern-based grouping (e.g., audience:* → audience_group)
      *
      * @param array<string> $tags Quiz tags to map
      * @return array<string, array<string>> Taxonomy filters
@@ -177,9 +178,23 @@ class TagMapper
         ];
         
         foreach ($tags as $tag) {
-            if (isset($mapping[$tag])) {
-                foreach ($mapping[$tag] as $taxonomy => $terms) {
+            // First try exact match
+            $tagMapping = $mapping[$tag] ?? null;
+            
+            // If no exact match, try pattern matching for grouped tags
+            if ($tagMapping === null && strpos($tag, ':') !== false) {
+                [$prefix] = explode(':', $tag, 2);
+                $patternKey = $prefix . ':*';
+                $tagMapping = $mapping[$patternKey] ?? null;
+            }
+            
+            if ($tagMapping !== null) {
+                foreach ($tagMapping as $taxonomy => $terms) {
                     if (is_array($terms)) {
+                        // Ensure filters[$taxonomy] exists
+                        if (!isset($filters[$taxonomy])) {
+                            $filters[$taxonomy] = [];
+                        }
                         $filters[$taxonomy] = array_merge(
                             $filters[$taxonomy],
                             $terms
@@ -199,6 +214,40 @@ class TagMapper
         return array_filter($filters, function ($terms) {
             return !empty($terms);
         });
+    }
+    
+    /**
+     * Get mapping including grouping patterns
+     * Returns mapping with both explicit tags and pattern-based groups
+     *
+     * @return array<string, array<string, array<string>>> Complete mapping with grouping patterns
+     */
+    public function getMappingWithGroups(): array
+    {
+        $mapping = $this->getMapping();
+        
+        // Add grouping patterns if not already present
+        // These can be overridden by JSON file if needed
+        $groupingPatterns = [
+            'audience:*' => [
+                'resource_tags' => ['for-people-in-recovery', 'for-families', 'for-parents-caregivers']
+            ],
+            'stage:*' => [
+                'resource_category' => ['help-with-treatment', 'treatment-programs', 'support-groups', 'literature']
+            ],
+            'need:*' => [
+                'resource_tags' => ['treatment', 'interventions', 'counseling', 'peer-support']
+            ]
+        ];
+        
+        // Merge grouping patterns (only if not already defined in mapping)
+        foreach ($groupingPatterns as $pattern => $patternMapping) {
+            if (!isset($mapping[$pattern])) {
+                $mapping[$pattern] = $patternMapping;
+            }
+        }
+        
+        return $mapping;
     }
 }
 

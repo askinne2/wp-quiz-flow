@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace WpQuizFlow\Core;
 
+use WpQuizFlow\Tracking\QuizSession;
+
 /**
  * Activator Class
  *
@@ -32,6 +34,10 @@ class Activator
         
         // Set default options
         self::setDefaultOptions();
+        
+        // Create tracking table
+        $quizSession = new QuizSession();
+        $quizSession->createTable();
         
         // Log activation
         if (function_exists('\WpFieldFlow\Core\Debug::log')) {
