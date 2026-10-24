@@ -18,8 +18,8 @@
   "license": "GPL-2.0-or-later",
   "devDependencies": {
     "@babel/core": "^7.23.0",
-    "@babel/preset-env": "^7.23.0",
-    "@babel/preset-react": "^7.22.0",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
     "babel-loader": "^9.1.0",
     "css-loader": "^6.8.0",
     "style-loader": "^3.3.0",
