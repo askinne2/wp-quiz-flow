@@ -17,7 +17,7 @@
   "author": "21 ads media",
   "license": "GPL-2.0-or-later",
   "devDependencies": {
-    "@babel/core": "^8.0.1",
+    "@babel/core": "^8.0.10",
     "@babel/preset-env": "^8.0.2",
     "@babel/preset-react": "^8.0.1",
     "babel-loader": "^10.1.1",
